@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-8175315-20"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-8175315-20');
+</script>
+
+  <meta charset="utf-8">
+  <title>Coulomb interaction</title>
+</head>
+
+<body style="font-family:sans-serif; font-size:15px; margin-left:10; margin-right:10;">
+<center>
+	<div id="canvasesdiv" style="position:relative; display:block; margin:auto; width:600px; height:520px"></div>
+    <canvas id="myCanvas" style="display: block; position: absolute; margin: 0 auto;display: block;
+        position: absolute; margin: 0 auto; top: 0; bottom: 0; left: 0; right: 0;" width="600" height="520"></canvas>
+    <div id="morebuttons">
+      <input type="button" id="showbutton" value="Show net force arrows" onclick="showNetForce = 1; drawMotion();">
+      <input type="button" id="hidebutton" value="Hide net force arrows" onclick="showNetForce = 0; drawMotion();">
+    </div>
+    <div>Show individual forces for: &nbsp; &nbsp;
+    <input type="checkbox" id="check1" onchange="drawMotion();" >Charge 1
+    <input type="checkbox" id="check2" onchange="drawMotion();" >Charge 2
+    <input type="checkbox" id="check3" onchange="drawMotion();" >Charge 3
+    <input type="checkbox" id="check4" onchange="drawMotion();" >Charge 4
+    </div>
+
+</center>
+
+  <script>
+
+
+
+      function play() {
+        window.clearTimeout(timer);
+        runFlag = 1;
+        runMotion();
+
+      }
+
+      function pause() {
+        window.clearTimeout(timer);
+        runFlag = 0;
+
+      }
+
+      function stepForward() {
+        window.clearTimeout(timer);
+        runFlag = 1;
+        drawMotion();
+
+      }
+
+      function stepBack() {
+        window.clearTimeout(timer);
+        index = index-2;
+        if (index < -1) index = -1;
+        time = index/20;
+        xPos = xBase;
+        runFlag = 1;
+        drawMotion();
+
+      }
+
+
+      function reset() {
+        window.clearTimeout(timer);
+        index = -1;
+        time = 0.0;
+        runFlag = 1;
+        runMotion();
+
+      }
+
+
+
+      var canvas = document.getElementById("myCanvas");
+      var context = canvas.getContext("2d");
+      canvas.onmousedown = myDown;							// mouse event handler for computer browsers
+	  canvas.onmouseup = myUp;								// mouse event handler for computer browsers
+	  canvas.addEventListener("touchstart", myTouchStart, false);	// touch handler for iPhones, iPads, and Androids
+	  canvas.addEventListener("touchmove", myTouchMove, false);	// touch handler for iPhones, iPads, and Androids
+	  canvas.addEventListener("touchend", myTouchEnd, false);		// touch handler for iPhones, iPads, and Androids
+      var check1 = document.getElementById("check1");
+      var check2 = document.getElementById("check2");
+      var check3 = document.getElementById("check3");
+      var check4 = document.getElementById("check4");
+      var index = 0;
+      var xBase = 50;
+      var yBase = 200;
+      var radius = 14;
+      var runFlag = 1;
+      var time = 0.0;
+      var timer;
+      var charge1X = 300-3*40;
+      var charge1Y = yBase+40;
+      var charge2X = 300+3*40;
+      var charge2Y = yBase+40;
+      var charge3X = 300;
+      var charge3Y = yBase-140;
+      var charge4X = 580;
+      var charge4Y = 340;
+      var showNetForce = 1;
+
+      var sensorX = xBase+240;
+      var sensorY = yBase - 20;
+      var feedbackMessage = 'Rank the charges based on their magnitudes';
+      var Ex = 0;
+      var Ey = 0;
+      var F1x = 0;
+      var F1y = 0;
+      var F2x = 0;
+      var F2y = 0;
+      var F3x = 0;
+      var F3y = 0;
+      var F4x = 0;
+      var F4y = 0;
+      var alreadyGuessedFlag = 0;
+
+      var potential = 0;
+      var k = -40000;
+      var rSq = 0;
+      var xPos = 0;
+      var yPos = 0;
+      var vectorColor = 'black';
+      var Q1 = 3;
+      var Q2 = 4;
+      var Q3 = 5;
+      var Q4 = 0;
+      var ran1 = Math.random();
+      var ran2 = Math.random();
+      var ran3 = Math.random();
+      var tempQ;
+      if (ran1 > ran2) {
+        tempQ = Q1;
+        Q1 = Q2;
+        Q2 = tempQ;
+      }
+      if (ran1 > ran3) {
+        tempQ = Q1;
+        Q1 = Q3;
+        Q3 = tempQ;
+      }
+       if ((ran2 > ran3) && (Q2 < Q3)) {
+        tempQ = Q2;
+        Q2 = Q3;
+        Q3 = tempQ;
+      }
+      if ((ran2 > ran1) && (Q2 < Q1)) {
+        tempQ = Q2;
+        Q2 = Q1;
+        Q1 = tempQ;
+      }
+      if (Math.random() < 0.5) Q1 = -Q1;
+      if (Math.random() < 0.5) Q2 = -Q2;
+      if (Math.random() < 0.5) Q3 = -Q3;
+      var guessQ1 = 0;
+      var guessQ2 = 0;
+      var chargeColor = "red";
+      var rightAnswer = 0;
+      var wrongAnswer = 0;
+
+ //     var q1sliderX = 300;
+      var q1sliderY = 420;
+      var q1sliderXMin = 50;
+      var q1sliderXMax = 250;
+      var q1sliderValueMin = -5.0;
+      var q1sliderValueMax = 5.0;
+      var q1sliderValue = Q1;
+      var q1sliderX = q1sliderXMin+(q1sliderXMax-q1sliderXMin)*(Q1-q1sliderValueMin)/(q1sliderValueMax-q1sliderValueMin);
+      var q1sliderDecimals = 2;
+
+//      var q2sliderX = 580;
+      var q2sliderY = 420;
+      var q2sliderXMin = 350;
+      var q2sliderXMax = 550;
+      var q2sliderValueMin = -5.0;
+      var q2sliderValueMax = 5.0;
+      var q2sliderValue = Q2;
+      var q2sliderX = q2sliderXMin+(q2sliderXMax-q2sliderXMin)*(Q2-q2sliderValueMin)/(q2sliderValueMax-q2sliderValueMin);
+      var q2sliderDecimals = 2;
+
+ //     var q3sliderX = 300;
+      var q3sliderY = 500;
+      var q3sliderXMin = 50;
+      var q3sliderXMax = 250;
+      var q3sliderValueMin = -5.0;
+      var q3sliderValueMax = 5.0;
+      var q3sliderValue = Q3;
+      var q3sliderX = q3sliderXMin+(q3sliderXMax-q3sliderXMin)*(Q3-q3sliderValueMin)/(q3sliderValueMax-q3sliderValueMin);
+      var q3sliderDecimals = 2;
+
+//      var q4sliderX = 580;
+      var q4sliderY = 500;
+      var q4sliderXMin = 350;
+      var q4sliderXMax = 550;
+      var q4sliderValueMin = -5.0;
+      var q4sliderValueMax = 5.0;
+      var q4sliderValue = Q4;
+      var q4sliderX = q4sliderXMin+(q4sliderXMax-q4sliderXMin)*(Q4-q4sliderValueMin)/(q4sliderValueMax-q4sliderValueMin);
+      var q4sliderDecimals = 2;
+
+      var arraySize = 5;
+      var ray = new Array(arraySize);
+        for (var i = 0; i < arraySize; i++) {
+         ray[i] = {};
+         ray[i].x = 0.0;
+         ray[i].y = 0.0;
+         ray[i].charge = 0.0;
+         ray[i].color = "black";
+        }
+      ray[1].x = charge1X;
+      ray[1].y = charge1Y;
+      ray[1].charge = Q1;
+      ray[1].color = "#f66";
+      ray[2].x = charge2X;
+      ray[2].y = charge2Y;
+      ray[2].charge = Q2;
+      ray[2].color = "#b6b";
+      ray[3].x = charge3X;
+      ray[3].y = charge3Y;
+      ray[3].charge = Q3;
+      ray[3].color = "#fa6";
+      ray[4].x = charge4X;
+      ray[4].y = charge4Y;
+      ray[4].charge = Q4;
+      ray[4].color = "#6a6";
+
+     drawMotion();
+
+    function drawMotion() {
+
+ //    console.log("In the drawMotion function, with runFlag = " + runFlag );
+
+      runFlag = 1;
+
+  //    console.log("In the drawMotion function, with runFlag = " + runFlag + " yPos = " + yPos + " index = " +index);
+
+      if (runFlag == 1) {    //      run if runFlag equal 1, not if equal 0
+        // clear
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        index = index + 1;
+//        console.log(Q1 + "   " +Q2 + "    " + Q3);
+
+        // clear
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // set background color for the entire thing
+           context.fillStyle = "#ffd";
+           context.fillRect(0, 0, canvas.width, canvas.height);
+
+       // draw Q1 slider
+
+           drawSlider(q1sliderX, q1sliderY, q1sliderXMin, q1sliderXMax, q1sliderValueMin, q1sliderValueMax, q1sliderValue, q1sliderDecimals);
+           var sLabel = 'Q1 = ';
+           sLabel = sLabel + q1sliderValue.toFixed(q1sliderDecimals) + ' nC';
+           context.font = '16pt Calibri';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           context.fillStyle = 'black';
+           context.fillText(sLabel,q1sliderXMin+0.5*(q1sliderXMax-q1sliderXMin), q1sliderY-25);
+
+       // draw Q2 slider
+
+           drawSlider(q2sliderX, q2sliderY, q2sliderXMin, q2sliderXMax, q2sliderValueMin, q2sliderValueMax, q2sliderValue, q2sliderDecimals);
+           sLabel = 'Q2 = ';
+           sLabel = sLabel + q2sliderValue.toFixed(q2sliderDecimals) + ' nC';
+           context.font = '16pt Calibri';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           context.fillStyle = 'black';
+           context.fillText(sLabel,q2sliderXMin+0.5*(q2sliderXMax-q2sliderXMin), q2sliderY-25);
+
+       // draw Q3 slider
+
+           drawSlider(q3sliderX, q3sliderY, q3sliderXMin, q3sliderXMax, q3sliderValueMin, q3sliderValueMax, q3sliderValue, q3sliderDecimals);
+           var sLabel = 'Q3 = ';
+           sLabel = sLabel + q3sliderValue.toFixed(q3sliderDecimals) + ' nC';
+           context.font = '16pt Calibri';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           context.fillStyle = 'black';
+           context.fillText(sLabel,q3sliderXMin+0.5*(q3sliderXMax-q3sliderXMin), q3sliderY-25);
+
+       // draw Q4 slider
+
+           drawSlider(q4sliderX, q4sliderY, q4sliderXMin, q4sliderXMax, q4sliderValueMin, q4sliderValueMax, q4sliderValue, q4sliderDecimals);
+           sLabel = 'Q4 = ';
+           sLabel = sLabel + q4sliderValue.toFixed(q4sliderDecimals) + ' nC';
+           context.font = '16pt Calibri';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           context.fillStyle = 'black';
+           context.fillText(sLabel,q4sliderXMin+0.5*(q4sliderXMax-q4sliderXMin), q4sliderY-25);
+
+        // set line color
+           context.strokeStyle = 'black';
+           context.lineWidth = 2;
+
+        // draw grid
+           for (var i = 0; i<11; i++) {
+             context.beginPath();
+             context.moveTo(60*i, 0);
+             context.lineTo(60*i, 360);
+             context.stroke();
+            }
+
+            for (var j = 0; j<7; j++) {
+             context.beginPath();
+             context.moveTo(0,60*j);
+             context.lineTo(600,60*j);
+             context.stroke();
+            }
+
+
+         // calculate the forces on each charge
+//           F1x = F1y = 0;
+//           F2x = F2y = 0;
+//           F3x = F3y = 0;
+//           rSq = (charge2X-charge1X)*(charge2X-charge1X) + (charge2Y-charge1Y)*(charge2Y-charge1Y);
+//           F1x = k*Q1*Q2*(charge2X-charge1X)/Math.pow(rSq,1.5);
+//           F1y = k*Q1*Q2*(charge1Y-charge2Y)/Math.pow(rSq,1.5);
+//           F2x = -F1x;
+//           F2y = -F1y;
+//           rSq = (charge3X-charge1X)*(charge3X-charge1X) + (charge3Y-charge1Y)*(charge3Y-charge1Y);
+//           F3x = k*Q1*Q3*(charge1X-charge3X)/Math.pow(rSq,1.5);
+//           F3y = k*Q1*Q3*(charge3Y-charge1Y)/Math.pow(rSq,1.5);
+//           F1x = F1x - F3x;
+//           F1y = F1y - F3y;
+//           rSq = (charge3X-charge2X)*(charge3X-charge2X) + (charge3Y-charge2Y)*(charge3Y-charge2Y);
+//           var tempX = k*Q2*Q3*(charge2X-charge3X)/Math.pow(rSq,1.5);
+//           var tempY = k*Q2*Q3*(charge3Y-charge2Y)/Math.pow(rSq,1.5);
+//           F3x = F3x + tempX;
+//           F3y = F3y + tempY;
+//           F2x = F2x - tempX;
+//           F2y = F2y - tempY;
+
+
+         // new section to calculate the forces on charge 1
+           rSq = (charge2X-charge1X)*(charge2X-charge1X) + (charge2Y-charge1Y)*(charge2Y-charge1Y);
+           var F12x = k*Q1*Q2*(charge2X-charge1X)/Math.pow(rSq,1.5);
+           var F12y = k*Q1*Q2*(charge1Y-charge2Y)/Math.pow(rSq,1.5);
+           var F21x = -F12x;
+           var F21y = -F12y;
+           rSq = (charge3X-charge1X)*(charge3X-charge1X) + (charge3Y-charge1Y)*(charge3Y-charge1Y);
+           var F13x = k*Q1*Q3*(charge3X-charge1X)/Math.pow(rSq,1.5);
+           var F13y = k*Q1*Q3*(charge1Y-charge3Y)/Math.pow(rSq,1.5);
+           var F31x = -F13x;
+           var F31y = -F13y;
+           rSq = (charge4X-charge1X)*(charge4X-charge1X) + (charge4Y-charge1Y)*(charge4Y-charge1Y);
+           var F14x = k*Q1*Q4*(charge4X-charge1X)/Math.pow(rSq,1.5);
+           var F14y = k*Q1*Q4*(charge1Y-charge4Y)/Math.pow(rSq,1.5);
+           var F41x = -F14x;
+           var F41y = -F14y;
+           if (check1.checked) {
+             drawArrow(F12x,F12y,charge1X,charge1Y,ray[2].color)
+             drawArrow(F13x,F13y,charge1X,charge1Y,ray[3].color)
+             drawArrow(F14x,F14y,charge1X,charge1Y,ray[4].color)
+           }
+
+         // new section to calculate the forces on charge 2
+           rSq = (charge3X-charge2X)*(charge3X-charge2X) + (charge3Y-charge2Y)*(charge3Y-charge2Y);
+           var F23x = k*Q3*Q2*(charge3X-charge2X)/Math.pow(rSq,1.5);
+           var F23y = k*Q3*Q2*(charge2Y-charge3Y)/Math.pow(rSq,1.5);
+           var F32x = -F23x;
+           var F32y = -F23y;
+           rSq = (charge4X-charge2X)*(charge4X-charge2X) + (charge4Y-charge2Y)*(charge4Y-charge2Y);
+           var F24x = k*Q2*Q4*(charge4X-charge2X)/Math.pow(rSq,1.5);
+           var F24y = k*Q2*Q4*(charge2Y-charge4Y)/Math.pow(rSq,1.5);
+           var F42x = -F24x;
+           var F42y = -F24y;
+           if (check2.checked) {
+             drawArrow(F21x,F21y,charge2X,charge2Y,ray[1].color)
+             drawArrow(F23x,F23y,charge2X,charge2Y,ray[3].color)
+             drawArrow(F24x,F24y,charge2X,charge2Y,ray[4].color)
+           }
+
+         // new section to calculate the forces on charge 3
+           rSq = (charge4X-charge3X)*(charge4X-charge3X) + (charge4Y-charge3Y)*(charge4Y-charge3Y);
+           var F34x = k*Q3*Q4*(charge4X-charge3X)/Math.pow(rSq,1.5);
+           var F34y = k*Q3*Q4*(charge3Y-charge4Y)/Math.pow(rSq,1.5);
+           var F43x = -F34x;
+           var F43y = -F34y;
+           if (check3.checked) {
+             drawArrow(F31x,F31y,charge3X,charge3Y,ray[1].color)
+             drawArrow(F32x,F32y,charge3X,charge3Y,ray[2].color)
+             drawArrow(F34x,F34y,charge3X,charge3Y,ray[4].color)
+           }
+
+         // new section to draw the forces on charge 4
+           if (check4.checked) {
+             drawArrow(F41x,F41y,charge4X,charge4Y,ray[1].color)
+             drawArrow(F42x,F42y,charge4X,charge4Y,ray[2].color)
+             drawArrow(F43x,F43y,charge4X,charge4Y,ray[3].color)
+           }
+
+            F1x = F12x + F13x + F14x;
+            F1y = F12y + F13y + F14y;
+            F2x = F21x + F23x + F24x;
+            F2y = F21y + F23y + F24y;
+            F3x = F31x + F32x + F34x;
+            F3y = F31y + F32y + F34y;
+            F4x = F41x + F42x + F43x;
+            F4y = F41y + F42y + F43y;
+
+            if (showNetForce == 1) {
+              vectorColor = "black";
+              drawArrow(F1x,F1y,charge1X,charge1Y,vectorColor)
+              drawArrow(F2x,F2y,charge2X,charge2Y,vectorColor)
+              drawArrow(F3x,F3y,charge3X,charge3Y,vectorColor)
+              drawArrow(F4x,F4y,charge4X,charge4Y,vectorColor)
+            }
+
+
+        // draw charges
+
+           if (Q1 > 0) chargeColor = "#f88";
+           else chargeColor = "#aaf";
+           chargeColor = ray[1].color;
+           context.fillStyle = chargeColor;
+           context.strokeStyle = chargeColor;
+
+           context.beginPath();
+           context.arc(charge1X, charge1Y, radius, 0, 2 * Math.PI, false);
+           context.fill();
+           context.lineWidth = 2;
+           context.stroke();
+
+           if (Q2 > 0) chargeColor = "#f88";
+           else chargeColor = "#aaf";
+           chargeColor = ray[2].color;
+           context.fillStyle = chargeColor;
+           context.strokeStyle = chargeColor;
+
+           context.beginPath();
+           context.arc(charge2X, charge2Y, radius, 0, 2 * Math.PI, false);
+           context.fill();
+           context.lineWidth = 2;
+           context.stroke();
+
+           if (Q3 > 0) chargeColor = "#f88";
+           else chargeColor = "#aaf";
+           chargeColor = ray[3].color;
+           context.fillStyle = chargeColor;
+           context.strokeStyle = chargeColor;
+
+           context.beginPath();
+           context.arc(charge3X, charge3Y, radius, 0, 2 * Math.PI, false);
+           context.fill();
+           context.lineWidth = 2;
+           context.stroke();
+
+           if (Q4 > 0) chargeColor = "#f88";
+           else chargeColor = "#aaf";
+           chargeColor = ray[4].color;
+           context.fillStyle = chargeColor;
+           context.strokeStyle = chargeColor;
+
+           context.beginPath();
+           context.arc(charge4X, charge4Y, radius, 0, 2 * Math.PI, false);
+           context.fill();
+           context.lineWidth = 2;
+           context.stroke();
+
+           context.font = '16pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'center';
+           context.fillText("1", charge1X, charge1Y);
+           context.fillText("2", charge2X, charge2Y);
+           context.fillText("3", charge3X, charge3Y);
+           context.fillText("4", charge4X, charge4Y);
+//           context.fillText("Correct Answers", 120, 50);
+//           context.fillText("Incorrect Answers", 480, 50);
+
+//           var correctLabel = rightAnswer.toFixed(0);
+//           context.textAlign = 'left';
+//           context.fillText(correctLabel, 120, 70);
+
+//           var incorrectLabel = wrongAnswer.toFixed(0);
+//           context.textAlign = 'left';
+//           context.fillText(incorrectLabel, 480, 70);
+
+
+
+//           context.fillStyle = 'blue';
+//           context.textAlign = 'center';
+//           context.fillText("Drag the red arrow to measure field and potential", xBase+250, yBase+235);
+
+//           context.fillStyle = '#a3a';
+//           context.textAlign = 'center';
+//           context.fillText(feedbackMessage, xBase+250, yBase+200);
+
+
+
+      }
+    }
+
+    function runMotion() {
+        drawMotion();
+        if (runFlag == 1) {
+          timer = window.setTimeout(runMotion, 2000/60);
+        }
+      }
+
+
+
+
+    function drawArrow(Fx,Fy,Px,Py, arrowColor) {
+           var theta = Math.atan2(Fy,Fx);
+           context.strokeStyle = arrowColor;
+           context.lineWidth = 4;
+           context.beginPath();
+           context.moveTo(Px, Py);
+           context.lineTo(Px+5*Fx, Py-5*Fy);
+           context.stroke();
+
+           context.lineWidth = 2;
+
+           var Fmag = Math.sqrt(Fx*Fx+Fy*Fy);
+           if (Fmag > 5) Fmag = 5;
+
+           context.fillStyle = arrowColor;
+           context.beginPath();
+           context.moveTo(Px+5*Fx-3*Fmag*Math.cos(theta+0.25*(3.1416/2)),Py-5*Fy+3*Fmag*Math.sin(theta+0.25*(3.1416/2)));
+           context.lineTo(Px+5*Fx,Py-5*Fy);
+           context.lineTo(Px+5*Fx-3*Fmag*Math.cos(theta-0.25*(3.1416/2)),Py-5*Fy+3*Fmag*Math.sin(theta-0.25*(3.1416/2)));
+
+           context.stroke();
+           context.fill();
+
+    }
+
+    function drawAxes(xAxisStart,yAxisStart,xNum, yNum, xOffset, xIncrement, yIncrement, xNumDecimals, yNumDecimals, xAxisTitle, yAxisTitle, graphTitle) {
+        // set background color for the graph
+           context.fillStyle = "#eff";
+           context.fillRect(xAxisStart, yAxisStart, 40*xNum, 40*yNum);
+
+           var axisLabel = '';
+           var axisValue = 0;
+
+         // vertical grid lines
+         context.lineWidth = 2;
+         context.strokeStyle = '#888';
+
+         for (var i = 0; i <= xNum; i++) {
+           context.beginPath();
+           context.moveTo(xAxisStart+40*i, yAxisStart);
+           context.lineTo(xAxisStart+40*i, yAxisStart+40*yNum+10);
+           context.stroke();
+           context.font = '14pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           axisValue = xOffset+xIncrement*(i);
+           axisLabel = axisValue.toFixed(xNumDecimals);
+           context.fillText(axisLabel, xAxisStart+40*i, yAxisStart+40*yNum+20);
+          }
+
+         // horizontal grid lines
+         for (i = 0; i <= yNum; i++) {
+           context.beginPath();
+           context.moveTo(xAxisStart-10, yAxisStart+40*i);
+           context.lineTo(xAxisStart+40*xNum, yAxisStart+40*i);
+           context.stroke();
+           context.font = '14pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           axisValue = yIncrement*(yNum-i);
+           axisLabel = axisValue.toFixed(yNumDecimals);
+           context.fillText(axisLabel, xAxisStart-30, yAxisStart+40*i);
+
+          }
+
+         // x-axis
+           context.strokeStyle = '#000';
+           context.lineWidth = 4;
+           context.beginPath();
+           context.moveTo(xAxisStart-1, yAxisStart+40*yNum);
+           context.lineTo(xAxisStart+40*xNum+20, yAxisStart+40*yNum);
+           context.stroke();
+           context.moveTo(xAxisStart+40*xNum+10, yAxisStart+40*yNum-6);
+           context.lineTo(xAxisStart+40*xNum+20, yAxisStart+40*yNum);
+           context.lineTo(xAxisStart+40*xNum+10, yAxisStart+40*yNum+6);
+           context.lineJoin = 'miter';
+           context.stroke();
+           context.font = '16pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'left';
+           context.fillText(xAxisTitle, xAxisStart+40*xNum+24, yAxisStart+40*yNum);
+
+         // y-axis
+           context.strokeStyle = '#000';
+           context.beginPath();
+           context.moveTo(xAxisStart, yAxisStart-20);
+           context.lineTo(xAxisStart, yAxisStart+40*yNum);
+           context.stroke();
+           context.moveTo(xAxisStart-6, yAxisStart-10);
+           context.lineTo(xAxisStart, yAxisStart-20);
+           context.lineTo(xAxisStart+6, yAxisStart-10);
+           context.lineJoin = 'miter';
+           context.stroke();
+           context.strokeStyle = '#000';
+           context.textAlign = 'center';
+  //         console.log("In the drawMotion function, with yAxisTitle = " + yAxisTitle + xAxisStart );
+
+           context.font = '16pt Calibri';
+           context.fillStyle = 'black';
+           context.fillText(yAxisTitle, xAxisStart-30, yAxisStart - 35);
+
+           // graph title
+           context.font = 'bold 18pt Calibri';
+           context.fillStyle = 'purple';
+           context.textAlign = 'center';
+           context.fillText(graphTitle, xAxisStart+40*xNum/2, yAxisStart-24);
+
+    }
+
+    function drawAxesMidY(xAxisStart,yAxisStart,xNum, yNum, xOffset, xIncrement, yIncrement, xNumDecimals, yNumDecimals, xAxisTitle, yAxisTitle, graphTitle) {
+        // set background color for the graph
+           context.fillStyle = "#eff";
+           context.fillRect(xAxisStart, yAxisStart, 40*xNum, 40*yNum);
+
+           var axisLabel = '';
+           var axisValue = 0;
+
+         // vertical grid lines
+         context.lineWidth = 2;
+         context.strokeStyle = '#888';
+
+         for (var i = 0; i <= xNum; i++) {
+           context.beginPath();
+           context.moveTo(xAxisStart+40*i, yAxisStart);
+           context.lineTo(xAxisStart+40*i, yAxisStart+40*yNum/2+10);
+           context.stroke();
+           context.moveTo(xAxisStart+40*i, yAxisStart+40*yNum/2+30);
+           context.lineTo(xAxisStart+40*i, yAxisStart+40*yNum);
+           context.stroke();
+           context.font = '14pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           axisValue = xOffset + xIncrement*(i);
+           axisLabel = axisValue.toFixed(xNumDecimals);
+           if (i > 0) context.fillText(axisLabel, xAxisStart+40*i, yAxisStart+40*yNum/2+20);
+          }
+
+         // horizontal grid lines
+         for (i = 0; i <= yNum; i++) {
+           context.beginPath();
+           context.moveTo(xAxisStart-10, yAxisStart+40*i);
+           context.lineTo(xAxisStart+40*xNum, yAxisStart+40*i);
+           context.stroke();
+           context.font = '14pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'center';
+           context.textBaseline = 'middle';
+           axisValue = yIncrement*(yNum/2-i);
+           axisLabel = axisValue.toFixed(yNumDecimals);
+           context.fillText(axisLabel, xAxisStart-30, yAxisStart+40*i);
+
+          }
+
+         // x-axis
+           context.strokeStyle = '#000';
+           context.lineWidth = 4;
+           context.beginPath();
+           context.moveTo(xAxisStart-1, yAxisStart+40*yNum/2);
+           context.lineTo(xAxisStart+40*xNum+20, yAxisStart+40*yNum/2);
+           context.stroke();
+           context.moveTo(xAxisStart+40*xNum+10, yAxisStart+40*yNum/2-6);
+           context.lineTo(xAxisStart+40*xNum+20, yAxisStart+40*yNum/2);
+           context.lineTo(xAxisStart+40*xNum+10, yAxisStart+40*yNum/2+6);
+           context.lineJoin = 'miter';
+           context.stroke();
+           context.font = '16pt Calibri';
+           context.fillStyle = 'black';
+           context.textAlign = 'left';
+           context.fillText(xAxisTitle, xAxisStart+40*xNum+24, yAxisStart+40*yNum/2);
+
+         // y-axis
+           context.strokeStyle = '#000';
+           context.beginPath();
+           context.moveTo(xAxisStart, yAxisStart-20);
+           context.lineTo(xAxisStart, yAxisStart+40*yNum);
+           context.stroke();
+           context.moveTo(xAxisStart-6, yAxisStart-10);
+           context.lineTo(xAxisStart, yAxisStart-20);
+           context.lineTo(xAxisStart+6, yAxisStart-10);
+           context.lineJoin = 'miter';
+           context.stroke();
+           context.strokeStyle = '#000';
+           context.textAlign = 'center';
+  //         console.log("In the drawMotion function, with yAxisTitle = " + yAxisTitle + xAxisStart );
+
+           context.font = '16pt Calibri';
+           context.fillStyle = 'black';
+           context.fillText(yAxisTitle, xAxisStart-0, yAxisStart - 35);
+
+           // graph title
+           context.font = 'bold 18pt Calibri';
+           context.fillStyle = 'purple';
+           context.textAlign = 'center';
+           context.fillText(graphTitle, xAxisStart+40*xNum/2, yAxisStart-24);
+
+    }
+
+    function drawSlider(sliderX, sliderY, sliderXMin, sliderXMax, sliderValueMin, sliderValueMax, sliderValue, sliderDecimals) {
+
+
+       context.strokeStyle = '#999';
+       context.lineWidth = 8;
+       context.beginPath();
+       context.moveTo(sliderXMin,sliderY);
+       context.lineTo(sliderXMax,sliderY);
+       context.stroke();
+
+       context.strokeStyle = '#44f';
+       context.lineWidth = 8;
+       context.beginPath();
+       context.moveTo(sliderXMin,sliderY);
+       context.lineTo(sliderX,sliderY);
+       context.stroke();
+
+       context.beginPath();
+       context.arc(sliderX, sliderY, 10, 0, 2 * Math.PI, false);
+       context.fillStyle = '#00f';
+       context.fill();
+       context.lineWidth = 1;
+       context.strokeStyle = 'black';
+       context.stroke();
+
+      }
+
+//  Mouse and Touch event functions from  Wolfgang Bauer
+
+function whereClicked(x_,y_,what_) {    // underscore denotes local variables
+	//if (what_ == 'down') {console.log('('+x_+','+y_+')'+what_)};
+//	console.log('('+x_+','+y_+')'+what_);
+//    console.log("x offset = " + charge1X + " y offset = " + charge1Y);
+      if ((Math.abs(x_ - (q1sliderX)) < 40) && (Math.abs(y_ - q1sliderY) < 40))   // moving the q1 slider
+      {
+        q1sliderX = x_ ;
+        if (q1sliderX < q1sliderXMin) q1sliderX = q1sliderXMin;
+        if (q1sliderX > q1sliderXMax) q1sliderX = q1sliderXMax;
+        q1sliderValue = q1sliderValueMin + (q1sliderValueMax-q1sliderValueMin)*(q1sliderX-q1sliderXMin)/(q1sliderXMax-q1sliderXMin);
+        Q1 = q1sliderValue;
+        drawMotion();
+      }
+      else if ((Math.abs(x_ - (q2sliderX)) < 40) && (Math.abs(y_ - q2sliderY) < 40))   // moving the q2 slider
+      {
+        q2sliderX = x_ ;
+        if (q2sliderX < q2sliderXMin) q2sliderX = q2sliderXMin;
+        if (q2sliderX > q2sliderXMax) q2sliderX = q2sliderXMax;
+        q2sliderValue = q2sliderValueMin + (q2sliderValueMax-q2sliderValueMin)*(q2sliderX-q2sliderXMin)/(q2sliderXMax-q2sliderXMin);
+        Q2 = q2sliderValue;
+        drawMotion();
+      }
+      if ((Math.abs(x_ - (q3sliderX)) < 40) && (Math.abs(y_ - q3sliderY) < 40))   // moving the q3 slider
+      {
+        q3sliderX = x_ ;
+        if (q3sliderX < q3sliderXMin) q3sliderX = q3sliderXMin;
+        if (q3sliderX > q3sliderXMax) q3sliderX = q3sliderXMax;
+        q3sliderValue = q3sliderValueMin + (q3sliderValueMax-q3sliderValueMin)*(q3sliderX-q3sliderXMin)/(q3sliderXMax-q3sliderXMin);
+        Q3 = q3sliderValue;
+        drawMotion();
+      }
+      else if ((Math.abs(x_ - (q4sliderX)) < 40) && (Math.abs(y_ - q4sliderY) < 40))   // moving the q4 slider
+      {
+        q4sliderX = x_ ;
+        if (q4sliderX < q4sliderXMin) q4sliderX = q4sliderXMin;
+        if (q4sliderX > q4sliderXMax) q4sliderX = q4sliderXMax;
+        q4sliderValue = q4sliderValueMin + (q4sliderValueMax-q4sliderValueMin)*(q4sliderX-q4sliderXMin)/(q4sliderXMax-q4sliderXMin);
+        Q4 = q4sliderValue;
+        drawMotion();
+      }
+     else if ((Math.abs(x_ - charge1X) < 24) && (Math.abs(y_ - charge1Y) < 24))   // moving charge 1
+      {
+        charge1X = x_ ;
+        charge1Y = y_ ;
+        if (charge1Y > 360) charge1Y = 360;
+//        if (masssliderX > masssliderXMax) masssliderX = masssliderXMax;
+//        reset();
+        drawMotion();
+      }
+      else if ((Math.abs(x_ - charge2X) < 24) && (Math.abs(y_ - charge2Y) < 24))   // moving charge 2
+      {
+        charge2X = x_ ;
+        charge2Y = y_ ;
+        if (charge2Y > 360) charge2Y = 360;
+//        if (lengthsliderX > lengthsliderXMax) lengthsliderX = lengthsliderXMax;
+//        reset();
+       drawMotion();
+      }
+      else if ((Math.abs(x_ - charge3X) < 24) && (Math.abs(y_ - charge3Y) < 24))   // moving charge 3
+      {
+        charge3X = x_ ;
+        charge3Y = y_ ;
+        if (charge3Y > 360) charge3Y = 360;
+//        if (lengthsliderX > lengthsliderXMax) lengthsliderX = lengthsliderXMax;
+//        reset();
+       drawMotion();
+      }
+      else if ((Math.abs(x_ - charge4X) < 24) && (Math.abs(y_ - charge4Y) < 24))   // moving charge 4
+      {
+        charge4X = x_ ;
+        charge4Y = y_ ;
+        if (charge4Y > 360) charge4Y = 360;
+//        if (lengthsliderX > lengthsliderXMax) lengthsliderX = lengthsliderXMax;
+//        reset();
+       drawMotion();
+      }
+//        reset();
+//      }
+//      else if ((Math.abs(x_ - (charge2X)) < 15) && (Math.abs(y_ - charge2Y) < 15))  // moving the right-hand charge
+//      {
+//        charge2X = x_ ;
+//        charge2Y = y_ ;
+//        reset();
+//      }
+
+	if (what_ == 'down') {
+//		dragRect = true;
+//		x1 = x_;     // x1, y1 are global variables
+//		y1 = y_;
+	}
+	if (what_ == 'move') {
+//		dragRect = true;
+//		dx = x_-x1;
+//		dy = y_-y1;
+	}
+	if (what_ == 'up') {
+//		dragRect = false;
+//		dx = x_-x1;
+//		dy = y_-y1;
+	}
+}
+
+function myMove(event){
+	var xClick = event.pageX - canvasesdiv.offsetLeft;
+	var yClick = event.pageY - canvasesdiv.offsetTop;
+	whereClicked(xClick,yClick,'move');
+//	drawAll();
+//	drawMotion();
+
+}
+
+function myDown(event){
+	var xClick = event.pageX - canvasesdiv.offsetLeft;
+	var yClick = event.pageY - canvasesdiv.offsetTop;
+	whereClicked(xClick,yClick,'down');
+	canvas.onmousemove = myMove;
+//	drawMotion();
+}
+
+function myUp(event){
+	var xClick = event.pageX - canvasesdiv.offsetLeft;
+	var yClick = event.pageY - canvasesdiv.offsetTop;
+	whereClicked(xClick,yClick,'up');
+	canvas.onmousemove = null;
+//	drawMotion();
+}
+
+function myTouchMove(event){
+	event.preventDefault();
+	var xClick = event.targetTouches[0].pageX - canvasesdiv.offsetLeft;
+	var yClick = event.targetTouches[0].pageY - canvasesdiv.offsetTop;
+	whereClicked(xClick,yClick,'move');
+//	drawMotion();
+}
+
+function myTouchStart(event){
+	event.preventDefault();
+	var xClick = event.targetTouches[0].pageX - canvasesdiv.offsetLeft;
+	var yClick = event.targetTouches[0].pageY - canvasesdiv.offsetTop;
+	whereClicked(xClick,yClick,'down');
+//	drawMotion();
+}
+
+function myTouchEnd(event){
+	event.preventDefault();
+	var xClick = event.targetTouches[0].pageX - canvasesdiv.offsetLeft;
+	var yClick = event.targetTouches[0].pageY - canvasesdiv.offsetTop;
+	whereClicked(xClick,yClick,'up');
+//	drawMotion();
+}
+
+
+  </script>
+<p>In this simulation, you can explore the force between charged particles. You can drag the particles
+around the screen to change their positions. If you only want two or three of them, just set the charge on
+one or two of the particles to zero.</p>
+
+<p>You can display (or not) an arrow representing the net force being applied to each particle.
+You can also use the checkboxes to display the individual forces being applied to the particles by the
+other particles.</p>
+
+<p>Simulation written by Andrew Duffy, and first posted on 2-4-2018. Inspired by Jennifer Snyder.</p>
+
+
+  <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" rel="dct:type">work</span> by <span xmlns:cc="http://creativecommons.org/ns#" property="cc:attributionName">Andrew Duffy</span> is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.<br />This simulation can be found in the collection at <a xmlns:dct="http://purl.org/dc/terms/" href="http://physics.bu.edu/~duffy/classroom.html" rel="dct:source">http://physics.bu.edu/~duffy/classroom.html</a>.
+  
+          <p>The counter has been running on this page since 8-12-2018. The number of people accessing the page since then is:
+<br><img src="http://physics.bu.edu/cgi-bin/Count.cgi?df=coulomb_interaction.dat" align="absmiddle">
+
+</body>
+</html>
