@@ -155,45 +155,6 @@
 
           yBase = 150;   // for the visible spectrum
 
-         // draw an axis
-           context.beginPath();
-           context.moveTo(xBase, yBase);
-           context.lineTo(xBase+600, yBase);
-           context.stroke();
-
-         // draw and label the tick marks
-
-         for (var i = 0; i <= 6; i++) {
-           context.beginPath();
-           context.moveTo(xBase+i*100, yBase);
-           context.lineTo(xBase+i*100, yBase+10);
-           context.stroke();
-           context.textAlign = 'center';
-           context.textBaseline = 'middle';
-           var axisValue = 400+50*i;
-           var axisLabel = axisValue.toFixed(0);
-           context.fillText(axisLabel, xBase+i*100, yBase+20);
-
-          }
-           context.font = '18pt Calibri';
-           context.fillText("Wavelength (nm)", 0.5*canvas.width, yBase+44);
-           context.fillText("The Visible Spectrum", 0.5*canvas.width, 50);
-
-           context.lineWidth = 1;
-
-         // wavelength from 400 to 700 nm, draw the visible spectrum
-         for (var i = 0; i <= 600; i++) {
-           var wavelength = 400 + 0.5*i;
-           lineColor = getLineColor(wavelength);
-           context.strokeStyle  = lineColor;
-           context.beginPath();
-           context.moveTo(xBase+i, yBase);
-           context.lineTo(xBase+i, yBase-80);
-           context.stroke();
-          }
-
-          yBase = 355;
-
           context.lineWidth = 2;
           context.strokeStyle  = "white";
           context.font = '14pt Calibri';
